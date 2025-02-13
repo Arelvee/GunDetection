@@ -1,0 +1,148 @@
+<!DOCTYPE html> 
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flask and SQLite</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            margin: 20px auto;
+            width: 80%;
+            overflow-x: auto;
+            background-image: url('static/gds.jpg'); /* Add your background image here */
+            background-size: cover; /* Ensure the background image covers the entire container */
+            background-position: center; /* Center the background image */
+            padding: 20px; /* Add padding to separate the background from the content */
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            border-spacing: 0;
+            background-color: #fff;
+            border: 1px solid #ddd;
+        }
+
+        th, td {
+            padding: 8px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+
+        th {
+            background-color: #007bff;
+            color: #fff;
+            font-weight: bold;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f2f2f2;
+        }
+
+        img {
+            max-width: 100%;
+            height: auto;
+        }
+
+        .search-form {
+            margin-bottom: 20px;
+            display: flex; /* Align items horizontally */
+            align-items: center; /* Vertically center items */
+        }
+
+        .search-input, .filter-select, .search-button, .clear-button, .back-button {
+            padding: 8px 15px;
+            border-radius: 5px;
+            margin-right: 10px;
+        }
+
+        .search-input, .filter-select {
+            border: 1px solid #ccc;
+        }
+
+        .search-button, .clear-button, .back-button {
+            border: none;
+            cursor: pointer;
+        }
+
+        .search-button {
+            background-color: #007bff;
+            color: #fff;
+        }
+
+        .clear-button {
+            background-color: #dc3545;
+            color: #fff;
+            text-decoration: none;
+        }
+
+        .back-button {
+            background-color: #007bff; /* Blue color */
+            color: #fff;
+            text-decoration: none;
+        }
+
+        .clear-button:hover,
+        .search-button:hover,
+        .back-button:hover {
+            opacity: 0.8;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+
+        <!-- Search form -->
+        <form class="search-form" action="{{ url_for('participants') }}" method="GET">
+            <input class="search-input" type="text" name="search" placeholder="Search...">
+            <select class="filter-select" name="filter">
+                <option value="frame_id">Frame ID</option>
+                <option value="timestamp">Timestamp</option>
+            </select>
+            <button class="search-button" type="submit">Search</button>
+            <a class="clear-button" href="{{ url_for('participants') }}">Refresh</a>
+            <!-- Back button -->
+            <a class="back-button" href="{{ url_for('back') }}">Back</a>
+        </form>
+
+        <!-- Add the format button with confirmation dialog -->
+        <form id="format-form" action="{{ url_for('format_data') }}" method="POST">
+            <button class="btn-format" type="button" onclick="confirmFormat()">Format Data</button>
+        </form>
+
+        <!-- Table -->
+        <table>
+            <thead>
+                <tr>
+                    <th>frame_id</th>
+                    <th>timestamp</th>
+                    <th>image_data</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for participant in data %}
+                <tr>
+                    <td>{{ participant[0] }}</td>
+                    <td>{{ participant[1] }}</td>
+                    <td><a href="data:image/jpeg;base64,{{ participant[2] }}" target="_blank"><img src="data:image/jpeg;base64,{{ participant[2] }}" alt="Image"></a></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        function confirmFormat() {
+            if (confirm("Are you sure you want to format your data?")) {
+                document.getElementById("format-form").submit(); // Submit the form
+            }
+        }
+    </script>
+</body>
+</html>

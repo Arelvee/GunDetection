@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Real-time Surveillance System with Weapon Detection and Armed-Personnel Recognition</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js" crossorigin="anonymous"></script>
+</head>
+
+<body class="bg-gray-100 h-screen">
+    <div class="flex h-full">
+        <!-- Sidebar -->
+        <aside class="fixed inset-y-0 left-0 w-64 bg-blue-600 text-white z-50 transform -translate-x-full md:translate-x-0 transition-transform duration-300" id="sidebar">
+            <div class="p-4 bg-blue-700 flex justify-between items-center md:hidden">
+                <span class="font-bold text-2xl">Dashboard</span>
+                <button onclick="toggleSidebar()" class="text-white text-2xl">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="p-4 bg-blue-700 hidden md:block text-center font-bold text-2xl">Dashboard</div>
+            <nav class="p-4 space-y-3">
+               
+                <div id="records-button" onclick="updateContent('records'); loadDetectedImages()" 
+                aria-label="Records" 
+                class="flex items-center px-4 py-2 hover:bg-blue-400 rounded transition cursor-pointer">
+               <i class="fas fa-database mr-2"></i>
+               <span>Records</span>
+           </div>
+           
+                <div onclick="window.location.href ='/index.html';" aria-label="Logout" class="flex items-center px-4 py-2 hover:bg-blue-400 rounded transition cursor-pointer">
+                    <i class="fas fa-sign-out-alt mr-2"></i>
+                    <span>Logout</span>
+                </div>
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <div class="flex-1 flex flex-col">
+            <!-- Navbar -->
+            <div class="p-4 bg-blue-600 text-white flex items-center md:hidden">
+                <button onclick="toggleSidebar()" class="text-2xl">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <h1 class="ml-4 font-bold text-xl">Dashboard</h1>
+            </div>
+
+            <!-- Default Main Content (Live Camera Feed) -->
+            <main id="main-content" class="flex-grow p-8">
+                <div class="bg-white shadow-lg rounded-lg p-6">
+                    <div class="text-center mb-6">
+                        <h1 class="text-gray-800 text-3xl font-bold">Live Camera Feed</h1>
+                        <p class="text-gray-500 mt-2">Monitor the live feed in real-time with detailed system information below.</p>
+                    </div>
+                    <div class="flex justify-center bg-gray-200 p-4 rounded-md shadow-inner border border-gray-300">
+                        <img id="video-feed" src="http://127.0.0.1:5000/video_feed" class="w-full max-w-4xl rounded-lg" alt="Live Video Feed" onerror="this.onerror=null; this.src='/images/placeholder.png';">
+                    </div>
+                </div>
+            </main>
+
+            <!-- Footer -->
+            <footer class="p-4 bg-white">
+                <div class="text-center">
+                    <a href="#" class="text-2xl font-semibold text-gray-900">
+                        <span>Real-time Surveillance System</span>
+                    </a>
+                    <p class="my-4 text-gray-500">Your trusted platform for quality services. Connecting you to the world of weapon detection and armed-personnel recognition.</p>
+                    <ul class="flex justify-center space-x-4">
+                        <li><a href="#" class="hover:underline">About</a></li>
+                        <li><a href="#" class="hover:underline">Services</a></li>
+                        <li><a href="#" class="hover:underline">Privacy Policy</a></li>
+                        <li><a href="#" class="hover:underline">Terms</a></li>
+                        <li><a href="#" class="hover:underline">Contact</a></li>
+                    </ul>
+                    <span class="text-sm text-gray-500">&copy; 2025 Engr. Malicsi. All Rights Reserved.</span>
+                </div>
+            </footer>
+        </div>
+    </div>
+
+    <script>
+document.addEventListener("DOMContentLoaded", function() {
+    startGalleryAutoRefresh(); // Start auto-refresh on page load
+});
+
+function updateContent(section) {
+    const sections = {
+        'live-feed': `
+            <div class="bg-white shadow-lg rounded-lg p-6">
+                <h1 class="text-gray-800 text-3xl font-bold text-center">Live Camera Feed</h1>
+                <p class="text-gray-500 text-center mt-2">Monitor the live feed in real-time.</p>
+                <div class="flex justify-center bg-gray-200 p-4 rounded-md shadow-inner border border-gray-300">
+                    <img id="video-feed" 
+                        src="/video_feed" 
+                        class="w-full max-w-4xl rounded-lg" 
+                        alt="Live Video Feed"
+                        onerror="this.onerror=null; this.src='/images/placeholder.png';">
+                </div>
+            </div>`,
+        'records': `
+            <div class="bg-white shadow-lg rounded-lg p-6">
+                <h1 class="text-gray-800 text-3xl font-bold text-center">Captured Records</h1>
+                <p class="text-gray-500 text-center mt-2">List of detected images.</p>
+                <div id="image-gallery" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mt-6"></div>
+            </div>`
+    };
+
+    document.getElementById('main-content').innerHTML = sections[section] || '';
+
+    if (section === 'records') {
+        loadGallery(); // Load images dynamically
+    }
+}
+
+function loadGallery() {
+    fetch('/get_images')
+        .then(response => response.json())
+        .then(data => {
+            let gallery = document.getElementById('image-gallery');
+            gallery.innerHTML = ''; // Clear previous images
+
+            if (data.images.length === 0) {
+                gallery.innerHTML = '<p class="text-gray-500 text-center w-full">No detected images found.</p>';
+                return;
+            }
+
+            data.images.forEach(img => {
+                let imgSrc = `/detected_images/${img}`;
+                let imgElement = document.createElement('img');
+                imgElement.src = imgSrc;
+                imgElement.alt = 'Detected Object';
+                imgElement.classList.add('w-full', 'h-48', 'object-cover', 'rounded-lg', 'shadow-md', 'hover:scale-105', 'transition', 'duration-300');
+
+                let imgWrapper = document.createElement('div');
+                imgWrapper.classList.add('p-2');
+                imgWrapper.appendChild(imgElement);
+
+                gallery.appendChild(imgWrapper);
+            });
+        })
+        .catch(error => console.error('Error loading images:', error));
+}
+document.addEventListener("DOMContentLoaded", function() {
+    setInterval(loadDetectedImages, 5000);  // Auto-refresh images every 5 seconds
+});
+
+function loadDetectedImages() {
+    fetch('/get_images')
+        .then(response => response.json())
+        .then(data => {
+            let gallery = document.getElementById('image-gallery');
+            gallery.innerHTML = ''; 
+
+            if (data.images.length === 0) {
+                gallery.innerHTML = '<p class="text-gray-500 text-center">No detected images found.</p>';
+                return;
+            }
+
+            data.images.forEach(img => {
+                let imgSrc = `/detected_images/${img}`;
+                let imgElement = document.createElement('img');
+                imgElement.src = imgSrc;
+                imgElement.alt = 'Detected Object';
+                imgElement.classList.add('w-full', 'h-48', 'object-cover', 'rounded-lg', 'shadow-md', 'hover:scale-105', 'transition', 'duration-300');
+
+                let imgWrapper = document.createElement('div');
+                imgWrapper.classList.add('p-2');
+                imgWrapper.appendChild(imgElement);
+
+                gallery.appendChild(imgWrapper);
+            });
+        })
+        .catch(error => console.error('Error loading images:', error));
+}
+
+// Trigger loading images when clicking "Records"
+document.getElementById('records-button').addEventListener('click', loadDetectedImages);
+
+let galleryInterval;
+function startGalleryAutoRefresh() {
+    if (galleryInterval) return;
+    galleryInterval = setInterval(() => {
+        if (document.getElementById('main-content').innerHTML.includes("Captured Records")) {
+            loadGallery();
+        }
+    }, 5000);
+}
+
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flask and SQLite</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f5f5f5;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        form {
+            background-color: #ffffff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            width: 300px;
+        }
+
+        label {
+            font-weight: bold;
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        input[type="text"],
+        input[type="number"] {
+            width: calc(100% - 20px);
+            padding: 8px;
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
+        input[type="submit"] {
+            width: 100%;
+            padding: 10px;
+            background-color: #007bff;
+            color: #ffffff;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        input[type="submit"]:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <form method="POST">
+        <label for="Fname">Enter First Name:</label>
+        <input type="text" id="Fname" name="Fname" placeholder="Enter your first name" required>
+        <label for="Lname">Enter Last Name:</label>
+        <input type="text" id="Lname" name="Lname" placeholder="Enter your last name" required>
+        <label for="color">Enter Color:</label>
+        <input type="text" id="color" name="color" placeholder="Enter your car color" required>
+        <label for="Pnumber">Enter Plate Number:</label>
+        <input type="text" id="Pnumber" name="Pnumber" placeholder="Enter your Plate Number" required>
+        <label for="age">Enter Age:</label>
+        <input type="number" id="age" name="age" placeholder="Enter age" required>
+        <label for="gender">Enter Gender:</label>
+        <input type="text" id="gender" name="gender" placeholder="Enter Your Gender" required>
+        <label for="PhoneNo">Enter Phone Number:</label>
+        <input type="text" id="PhoneNo" name="PhoneNo" placeholder="Enter Your Phone Number" required>
+        <input type="submit" value="Submit">
+    </form>
+</body>
+</html>
