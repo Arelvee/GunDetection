@@ -195,14 +195,20 @@ def generate_frames():
 def video_feed():
     return Response(generate_frames(), mimetype='multipart/x-mixed-replace; boundary=frame')
 
-@app.route('/get_images', methods=['GET'])
+# Serve images from the static directory
+@app.route('/get_images')
 def get_images():
-    images = [img for img in os.listdir(SAVE_DIR) if img.endswith(('jpg', 'png', 'jpeg'))]
-    return jsonify({"images": images})
+    image_folder = "static/detected_images"
+    try:
+        images = os.listdir(image_folder)  # List all images
+        return jsonify({"images": images})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
+# Serve individual images
 @app.route('/detected_images/<filename>')
 def serve_image(filename):
-    return send_from_directory(SAVE_DIR, filename)
+    return send_from_directory(os.path.join(app.static_folder, 'detected_images'), filename)
 
 def get_detection_history():
     conn = sqlite3.connect(DB_PATH)
@@ -221,6 +227,54 @@ def detection_history():
     except Exception as e:
         logging.error(f"Error fetching history: {e}")
         return jsonify({"error": "Failed to load history"}), 500
+    
+
+@app.route('/get_alert_status', methods=['GET'])
+def get_alert_status():
+    # Capture a frame from the camera
+    ret, frame = camera.read()
+    if not ret:
+        return jsonify({"error": "Unable to read camera frame"}), 500
+
+    # Run YOLO detection
+    results = model(frame)
+    detected_objects = []
+
+    if results and len(results[0].boxes) > 0:
+        for cls in results[0].boxes.cls:
+            label = model.names[int(cls)]
+            detected_objects.append(label)
+
+    # 🚨 SECURITY ALERT SYSTEM 🚨
+    alert_message = "No Threat Detected"
+    alert_color = (0, 255, 0)  # Green (Safe)
+    play_sound = False
+    detected_faces = any(obj in KNOWN_OFFICERS for obj in detected_objects)  # Check if a known officer is detected
+
+    # Check for firearm or weapon detection
+    if any(obj in ["rifle", "handgun", "shotgun", "revolver"] for obj in detected_objects):
+        if detected_faces:
+            alert_message = "SAFE"
+        else:
+            alert_message = "WARNING"
+            alert_color = (255, 215, 0)  # Yellow Gold
+            play_sound = True
+
+    elif any(obj in ["unregistered firearm", "bladed weapon"] for obj in detected_objects):
+        if detected_faces:
+            alert_message = "WARNING"
+            alert_color = (255, 215, 0)  # Yellow Gold
+            play_sound = True
+        else:
+            alert_message = "THREAT!"
+            alert_color = (255, 0, 0)  # Red
+            play_sound = True
+
+    return jsonify({
+        "alert_message": alert_message,
+        "alert_color": list(alert_color),  # Convert tuple to list for JSON serialization
+        "play_sound": play_sound
+    })
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=False)

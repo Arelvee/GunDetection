@@ -12,11 +12,13 @@
     <aside class="w-64 bg-blue-700 text-white flex flex-col py-6 px-4 fixed h-full shadow-lg transform -translate-x-full md:translate-x-0 transition-transform duration-300" id="sidebar">
         <div class="text-center text-2xl font-bold mb-6">Dashboard</div>
         <nav class="space-y-4">
-            <div id="records-button" onclick="updateContent('records'); loadDetectedImages()" class="flex items-center px-4 py-3 hover:bg-blue-500 rounded cursor-pointer transition">
+            <div id="records-button" onclick="updateContent('records')" 
+                class="flex items-center px-4 py-3 hover:bg-blue-500 rounded cursor-pointer transition">
                 <i class="fas fa-database mr-3"></i>
                 <span>Records</span>
             </div>
-            <div onclick="window.location.href ='/index.html';" class="flex items-center px-4 py-3 hover:bg-blue-500 rounded cursor-pointer transition">
+            <div onclick="window.location.href ='/index.html';" 
+                class="flex items-center px-4 py-3 hover:bg-blue-500 rounded cursor-pointer transition">
                 <i class="fas fa-sign-out-alt mr-3"></i>
                 <span>Logout</span>
             </div>
@@ -35,26 +37,33 @@
 
         <!-- Content Area -->
        <!-- Content Area -->
-<main id="main-content" class="flex-grow p-8 flex flex-col items-center justify-center">
-    <div class="bg-white shadow-lg rounded-lg p-6 w-full max-w-4xl">
-        <h1 class="text-gray-800 text-3xl font-bold text-center">Live Camera Feed</h1>
-        <p class="text-gray-500 text-center mt-2">Monitor the live feed in real-time.</p>
-        <div class="flex flex-col md:flex-row gap-6">
-            <!-- Live Feed -->
-            <div class="flex justify-center bg-gray-200 p-4 rounded-md shadow-inner border border-gray-300 mt-4 w-full md:w-2/3">
-                <img id="video-feed" src="http://127.0.0.1:5000/video_feed" class="w-full max-w-3xl rounded-lg" alt="Live Video Feed" onerror="this.onerror=null; this.src='/images/placeholder.png';">
+       <main id="main-content" class="flex-grow p-8 flex flex-col items-center justify-center">
+        <div class="bg-white shadow-lg rounded-lg p-6 w-full max-w-4xl">
+            <h1 class="text-gray-800 text-3xl font-bold text-center">Live Camera Feed</h1>
+            <p class="text-gray-500 text-center mt-2">Monitor the live feed in real-time.</p>
+    
+            <!-- 🚨 Alert Message Section -->
+            <div id="alert-box" class="text-center p-3 rounded-md mt-4 text-lg font-bold">
+                <p id="alert-message">No Threat Detected</p>
             </div>
-
-            <!-- Detection History -->
-            <div class="bg-gray-100 p-4 rounded-md shadow-md border border-gray-300 w-full md:w-1/3">
-                <h2 class="text-gray-800 text-xl font-semibold">Detection History</h2>
-                <div id="history-container" class="mt-2 max-h-96 overflow-auto">
-                    <p class="text-gray-500">Loading...</p>
+    
+            <div class="flex flex-col md:flex-row gap-6">
+                <!-- Live Feed -->
+                <div class="flex justify-center bg-gray-200 p-4 rounded-md shadow-inner border border-gray-300 mt-4 w-full md:w-2/3">
+                    <img id="video-feed" src="http://127.0.0.1:5000/video_feed" class="w-full max-w-3xl rounded-lg" alt="Live Video Feed" onerror="this.onerror=null; this.src='/images/placeholder.png';">
+                </div>
+    
+                <!-- Detection History -->
+                <div class="bg-gray-100 p-4 rounded-md shadow-md border border-gray-300 w-full md:w-1/3">
+                    <h2 class="text-gray-800 text-xl font-semibold">Detection History</h2>
+                    <div id="history-container" class="mt-2 max-h-96 overflow-auto">
+                        <p class="text-gray-500">Loading...</p>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
-</main>
+    </main>
+    
 
         <!-- Footer -->
         <footer class="p-4 bg-white shadow text-center">
@@ -107,46 +116,96 @@ async function fetchDetectionHistory() {
 setInterval(fetchDetectionHistory, 5000); // Refresh history every 5 seconds
 fetchDetectionHistory(); // Initial fetch
 
+async function fetchAlertStatus() {
+    try {
+        const response = await fetch('http://127.0.0.1:5000/get_alert_status');
+        const data = await response.json();
 
-        function updateContent(section) {
-            const sections = {
-                'records': `
-                    <div class="bg-white shadow-lg rounded-lg p-6 w-full max-w-4xl">
-                        <h1 class="text-gray-800 text-3xl font-bold text-center">Captured Records</h1>
-                        <p class="text-gray-500 text-center mt-2">List of detected images.</p>
-                        <div id="image-gallery" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mt-6"></div>
-                    </div>`
-            };
-            document.getElementById('main-content').innerHTML = sections[section] || '';
-            if (section === 'records') {
-                loadGallery();
+        const alertBox = document.getElementById("alert-box");
+        const alertMessage = document.getElementById("alert-message");
+
+        alertMessage.innerText = data.alert_message;
+
+        // Apply background color based on alert status
+        const rgbColor = `rgb(${data.alert_color[0]}, ${data.alert_color[1]}, ${data.alert_color[2]})`;
+        alertBox.style.backgroundColor = rgbColor;
+    } catch (error) {
+        console.error("Error fetching alert status:", error);
+    }
+}
+
+// Fetch alert status every 5 seconds
+setInterval(fetchAlertStatus, 5000);
+fetchAlertStatus(); // Initial call
+
+
+
+
+function loadGallery() {
+    fetch('http://127.0.0.1:5000/get_images')
+
+        .then(response => response.json())
+        .then(data => {
+            console.log("Fetched images:", data); // Debugging: See what we get
+
+            let gallery = document.getElementById('image-gallery');
+            if (!gallery) {
+                console.error("Error: #image-gallery not found");
+                return;
             }
-        }
 
-        function loadGallery() {
-            fetch('/get_images')
-                .then(response => response.json())
-                .then(data => {
-                    let gallery = document.getElementById('image-gallery');
-                    gallery.innerHTML = '';
-                    if (data.images.length === 0) {
-                        gallery.innerHTML = '<p class="text-gray-500 text-center w-full">No detected images found.</p>';
-                        return;
-                    }
-                    data.images.forEach(img => {
-                        let imgSrc = `/detected_images/${img}`;
-                        let imgElement = document.createElement('img');
-                        imgElement.src = imgSrc;
-                        imgElement.alt = 'Detected Object';
-                        imgElement.classList.add('w-full', 'h-48', 'object-cover', 'rounded-lg', 'shadow-md', 'hover:scale-105', 'transition', 'duration-300');
-                        let imgWrapper = document.createElement('div');
-                        imgWrapper.classList.add('p-2');
-                        imgWrapper.appendChild(imgElement);
-                        gallery.appendChild(imgWrapper);
-                    });
-                })
-                .catch(error => console.error('Error loading images:', error));
-        }
+            gallery.innerHTML = ''; // Clear existing images
+
+            if (data.images.length === 0) {
+                gallery.innerHTML = '<p class="text-gray-500 text-center w-full">No detected images found.</p>';
+                return;
+            }
+
+            data.images.forEach(img => {
+                let imgSrc = `/static/detected_images/${img}`; // Ensure correct path
+                let imgElement = document.createElement('img');
+                imgElement.src = imgSrc;
+                imgElement.alt = 'Detected Object';
+                imgElement.classList.add('w-full', 'h-48', 'object-cover', 'rounded-lg', 'shadow-md', 'hover:scale-105', 'transition', 'duration-300');
+
+                let imgWrapper = document.createElement('div');
+                imgWrapper.classList.add('p-2');
+                imgWrapper.appendChild(imgElement);
+
+                gallery.appendChild(imgWrapper);
+            });
+        })
+        .catch(error => {
+            console.error('Error loading images:', error);
+            document.getElementById('image-gallery').innerHTML = "<p class='text-red-500'>Failed to load images.</p>";
+        });
+}
+
+function updateContent(section) {
+    console.log("Updating content to:", section);
+
+    const sections = {
+        'records': `
+            <div class="bg-white shadow-lg rounded-lg p-6 w-full max-w-4xl">
+                <h1 class="text-gray-800 text-3xl font-bold text-center">Captured Records</h1>
+                <p class="text-gray-500 text-center mt-2">List of detected images.</p>
+                <div id="image-gallery" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mt-6"></div>
+            </div>`
+    };
+
+    document.getElementById('main-content').innerHTML = sections[section] || '';
+
+    if (section === 'records') {
+        console.log("Calling loadGallery...");
+        loadGallery();
+    }
+}
+
+document.getElementById('records-button').addEventListener('click', function () {
+    console.log("Records button clicked!");
+    updateContent('records');
+});
+
 
         document.getElementById('records-button').addEventListener('click', loadGallery);
     </script>
