@@ -13,6 +13,9 @@ current_dir = os.path.abspath(os.path.dirname(__file__))
 model_path = os.path.join(current_dir, "best.pt")
 sound_path = os.path.join(current_dir, "notif.mp3")  # Path to alarm sound
 
+# Load the YOLO model globally
+model = YOLO(model_path).to(device)  # Ensure model is accessible to all functions
+
 # Store last detected bounding boxes
 last_detected_boxes = []
 frame_persistence = 10  # Frames to keep boxes visible
@@ -20,7 +23,7 @@ frames_since_last_detection = 0  # Track frames without detection
 alarm_triggered = False  # Flag to avoid repeated alarms
 
 # List of firearm-related class labels that should trigger the alarm
-firearm_classes = {"unregistered firearm"} # Adjust based on your YOLO model's class names
+firearm_classes = {"unregistered firearm"}  # Adjust based on your YOLO model's class names
 
 # Initialize pygame mixer for sound notifications
 pygame.mixer.init()
@@ -33,34 +36,35 @@ def play_alarm():
         sound.play()
         alarm_triggered = True  # Set flag to prevent repeated alarms
 
-def perform_detection(model, frame, confidence_threshold):
+def perform_detection(frame, confidence_threshold=0.6):
+    """Runs YOLO detection and returns the processed frame with bounding boxes."""
     global last_detected_boxes, frame_persistence, frames_since_last_detection, alarm_triggered
 
     # Run YOLO detection
-    results = model(frame, imgsz=640, device=device)
+    results = model(frame)
     detections = results[0].boxes
 
     new_detected_boxes = []
     firearm_detected = False  # Track if any firearm is detected
 
     for detection in detections:
-        x1, y1, x2, y2 = detection.xyxy[0]
+        x1, y1, x2, y2 = map(int, detection.xyxy[0].tolist())
         conf = detection.conf[0].item()
         class_id = int(detection.cls[0].item())  # Get class ID
         label = model.names[class_id]  # Convert class ID to label
 
         if conf >= confidence_threshold:
-            x1, y1, x2, y2 = map(int, detection.xyxy[0].tolist())
             new_detected_boxes.append((x1, y1, x2, y2, conf, label))
 
             # Check if detected object is an unregistered firearm
             if label.lower() in firearm_classes:
                 firearm_detected = True
 
-    # Trigger alarm if at least one firearm is detected
-    if firearm_detected:
-        threading.Thread(target=play_alarm).start()
-    else:
+    # Trigger alarm if a firearm is detected
+    if firearm_detected and not alarm_triggered:
+        threading.Thread(target=play_alarm, daemon=True).start()
+        alarm_triggered = True
+    elif not firearm_detected:
         alarm_triggered = False  # Reset alarm flag when no firearm is detected
 
     # Update last detected boxes
@@ -84,39 +88,33 @@ def perform_detection(model, frame, confidence_threshold):
 
     return frame
 
-def display_frames(vid_path, model, confidence_threshold):
+def display_frames(vid_path, confidence_threshold=0.6):
     cap = cv2.VideoCapture(vid_path)
-    cv2.namedWindow("cam1", cv2.WINDOW_NORMAL)
 
-    frame_no = 1
-    skip_frame = 5  # Process every 5th frame
+    if not cap.isOpened():
+        print("[ERROR] Could not open video source!")
+        return
 
     while cap.isOpened():
-        ret, frame = cap.read()
-        if not ret:
-            print("[INFO] Failed to capture frame")
+        success, frame = cap.read()
+        if not success:
+            print("[ERROR] Failed to read frame")
             break
 
-        frame_with_boxes = perform_detection(model, frame, confidence_threshold)
+        frame = perform_detection(frame, confidence_threshold)
 
-        cv2.imshow("cam1", frame_with_boxes)
-
-        if cv2.waitKey(1) & 0xFF == ord("q"):
+        # Display the frame
+        cv2.imshow("YOLO Detection", frame)
+        if cv2.waitKey(1) & 0xFF == ord('q'):
             break
-
-        frame_no += 1
 
     cap.release()
     cv2.destroyAllWindows()
 
-def main(vid_path=0, vid_out="live.avi"):
-    model = YOLO(model_path)
-    model.to(device)
 
-    confidence_threshold = 0.6  # Set confidence threshold
+def main(vid_path=0):
+    print("Starting video processing...")
+    display_frames(vid_path, confidence_threshold=0.6)  # Run directly without threading
 
-    # Start a thread to display frames from the video source
-    display_thread = threading.Thread(target=display_frames, args=(vid_path, model, confidence_threshold))
-    display_thread.start()
-
-main()
+if __name__ == "__main__":
+    main()
